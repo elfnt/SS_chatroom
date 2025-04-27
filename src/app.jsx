@@ -1,14 +1,13 @@
-// src/App.jsx
-import React, { useState, useEffect } from 'react';
-import { auth } from './services/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import React, { useState, useEffect } from "react";
+import { auth } from "./services/firebase";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import ChatroomPage from "./pages/ChatroomPage"; 
 
 function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState(null);
 
-  // 監聽使用者登入狀態
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -44,14 +43,7 @@ function App() {
   };
 
   if (user) {
-    // 已登入時顯示聊天室畫面
-    return (
-      <div style={{ padding: '20px' }}>
-        <h1>聊天室</h1>
-        <p>歡迎，{user.email}</p>
-        <button onClick={handleSignout}>登出</button>
-      </div>
-    );
+    return <ChatroomPage user={user} onSignOut={handleSignout} />; 
   }
 
   return (
