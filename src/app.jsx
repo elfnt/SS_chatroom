@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect } from "react";
 import { auth, database } from "./services/firebase";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
@@ -30,14 +31,14 @@ function App() {
       const profileRef = ref(database, `profiles/${currentUser.uid}`);
       const snapshot = await get(profileRef);
 
-      if (!snapshot.exists() || !snapshot.val().username) {
-        setPage('profile');  // 去設定個人資料
+      if (!snapshot.exists() || !snapshot.val().username || snapshot.val().username.trim() === "") {
+        setPage('profile');  // ✅ 沒有設定 username，留在個人檔案頁面
       } else {
-        setPage('chatroom'); // 有資料直接進聊天室
+        setPage('chatroom'); // ✅ 有 username，才能進聊天室
       }
     } catch (error) {
-      console.error('檢查profile失敗', error);
-      setPage('profile'); // 如果錯誤，保險起見，導向個人資料設定
+      console.error('檢查profile失敗：', error);
+      setPage('profile'); // 如果錯誤，保險起見，強制要求設定個人資料
     }
   };
 
@@ -45,7 +46,8 @@ function App() {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       setUser(userCredential.user);
-      alert('註冊成功，請設定個人檔案');
+      alert('註冊成功，請設定您的個人資料');
+      // 初始化空的個人資料
       await set(ref(database, `profiles/${userCredential.user.uid}`), {
         pfp: '',
         username: '',
@@ -79,7 +81,7 @@ function App() {
     alert('已登出');
   };
 
-  if (!user) {
+  if (!user || page === 'login') {
     return (
       <div style={{ padding: '20px' }}>
         <h1>登入 / 註冊</h1>
@@ -104,7 +106,7 @@ function App() {
   }
 
   if (page === 'profile') {
-    return <ProfilePage user={user} onBack={() => setPage('chatroom')} />;
+    return <ProfilePage user={user} onBack={async () => await checkProfileAndSetPage(user)} />;
   }
 
   return <ChatroomPage user={user} onSignOut={handleSignout} onEditProfile={() => setPage('profile')} />;
