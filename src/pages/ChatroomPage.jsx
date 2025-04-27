@@ -1,71 +1,55 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { database } from '../services/firebase';
-import { ref, push, onChildAdded, onChildRemoved, get } from 'firebase/database';
+import { ref, push, remove, onChildAdded, onChildRemoved, get } from 'firebase/database';
 import ProfileModal from './ProfileModal';
 
 function ChatroomPage({ user, onSignOut, onEditProfile }) {
-  /* ---------- state ---------- */
-  const [messages, setMessages]   = useState([]);            // 所有訊息
-  const [profiles, setProfiles]   = useState({});            // uid → {username,pfp,bio}
-  const [newMsg, setNewMsg]       = useState('');            // 輸入框
-  const [hoverKey, setHoverKey]   = useState(null);          // hover 訊息 id
-  const [showModal, setShowModal] = useState(false);         // ProfileModal 開關
-  const [modalProfile, setModalProfile] = useState(null);    // Modal 內要看的 profile
-  const [blocked, setBlocked]     = useState(() =>
+  const [messages, setMessages] = useState([]);
+  const [profiles, setProfiles] = useState({});
+  const [newMsg, setNewMsg] = useState('');
+  const [hoverKey, setHoverKey] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [modalProfile, setModalProfile] = useState(null);
+  const [blocked, setBlocked] = useState(
     JSON.parse(localStorage.getItem('blockedUsers') || '[]')
   );
-
   const bottomRef = useRef(null);
 
-  /* ---------- 訊息監聽：只綁一次 ---------- */
   useEffect(() => {
     const msgRef = ref(database, 'messages');
 
     onChildAdded(msgRef, snap => {
-      const key = snap.key;
-      const data = snap.val();
-
-      setMessages(prev =>
-        prev.find(m => m.key === key) ? prev : [...prev, { key, ...data }]
-      );
+      const key = snap.key, data = snap.val();
+      setMessages(prev => (prev.find(m => m.key === key) ? prev : [...prev, { key, ...data }]));
     });
-
     onChildRemoved(msgRef, snap => {
       const key = snap.key;
       setMessages(prev => prev.filter(m => m.key !== key));
     });
-  }, []);                         // ← 依賴陣列為 []，只在掛載時執行一次
+  }, []);
 
-  /* ---------- 當有新 uid 出現時去拉取 profile ---------- */
   useEffect(() => {
     (async () => {
-      const unknownUids = messages
-        .map(m => m.uid)
+      const unknown = messages.map(m => m.uid)
         .filter(uid => !profiles[uid])
-        .filter((uid, idx, arr) => arr.indexOf(uid) === idx); // 去重
+        .filter((uid, idx, arr) => arr.indexOf(uid) === idx);
+      if (!unknown.length) return;
 
-      if (unknownUids.length === 0) return;
-
-      const updates = {};
+      const upd = {};
       await Promise.all(
-        unknownUids.map(async uid => {
-          const snap = await get(ref(database, `profiles/${uid}`));
-          if (snap.exists()) updates[uid] = snap.val();
+        unknown.map(async uid => {
+          const s = await get(ref(database, `profiles/${uid}`));
+          if (s.exists()) upd[uid] = s.val();
         })
       );
-      if (Object.keys(updates).length)
-        setProfiles(prev => ({ ...prev, ...updates }));
+      if (Object.keys(upd).length) setProfiles(p => ({ ...p, ...upd }));
     })();
   }, [messages, profiles]);
 
-  /* ---------- 訊息更新後自動滑到底 ---------- */
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'auto' });
-  }, [messages]);
+  useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), [messages]);
 
-  /* ---------- 事件 handler ---------- */
   const sendMessage = () => {
-    if (newMsg.trim() === '') return;
+    if (!newMsg.trim()) return;
     push(ref(database, 'messages'), {
       uid: user.uid,
       text: newMsg.trim(),
@@ -74,78 +58,79 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
     setNewMsg('');
   };
 
-  const recallMessage = key => {
-    push(ref(database, `messages/${key}`), null);            // remove() 在瀏覽器端不可直接 off，所以用 push(null) 簡易刪
+  const recall = key => {
+    remove(ref(database, `messages/${key}`))
+      .then(() => console.log('收回成功'))
+      .catch(err => {
+        console.error('收回失敗', err);
+        alert('收回失敗：' + err.message);
+      });
   };
 
   const toggleBlock = uid => {
-    if (uid === user.uid) { alert('不能封鎖自己！'); return; }
-
-    const updated = blocked.includes(uid)
-      ? blocked.filter(id => id !== uid)
-      : [...blocked, uid];
-
-    setBlocked(updated);
-    localStorage.setItem('blockedUsers', JSON.stringify(updated));
+    if (uid === user.uid) return alert('不能封鎖自己！');
+    const upd = blocked.includes(uid) ? blocked.filter(id => id !== uid) : [...blocked, uid];
+    setBlocked(upd);
+    localStorage.setItem('blockedUsers', JSON.stringify(upd));
     setShowModal(false);
   };
 
-  /* ---------- JSX ---------- */
   return (
-    <div style={{ padding: 20, maxWidth: 600, margin: '0 auto' }}>
+    <div className="container">
       {/* 頂欄 */}
-      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:20 }}>
-        <h2>聊天室</h2>
-        <div>
-          <button onClick={onSignOut} style={{ marginRight:10 }}>登出</button>
-          <button onClick={onEditProfile}>個人檔案</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h2 className="title">聊天室</h2>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="button" onClick={onEditProfile}>Profile</button>
+          <button className="button" onClick={onSignOut}>Logout</button>
         </div>
       </div>
 
       {/* 訊息列表 */}
-      <div style={{
-        border:'1px solid #ccc', padding:10, height:400, overflowY:'auto',
-        background:'#fafafa', borderRadius:8, marginBottom:20
-      }}>
-        {messages.map((m, i) => {
-          const prof   = profiles[m.uid] || {};
-          const me     = m.uid === user.uid;
-          const muted  = blocked.includes(m.uid);
+      <div className="message-list">
+        {messages.map(m => {
+          const prof = profiles[m.uid] || {};
+          const me = m.uid === user.uid;
+          const mute = blocked.includes(m.uid);
 
           return (
-            <div key={m.key} style={{
-              display:'flex', alignItems:'center', position:'relative',
-              marginBottom:15, opacity: muted?0.5:1, color: muted?'#888':'#000'
-            }}
-              onMouseEnter={()=>setHoverKey(m.key)}
-              onMouseLeave={()=>setHoverKey(null)}
+            <div
+              key={m.key}
+              className="message-item"
+              style={{ opacity: mute ? 0.5 : 1, color: mute ? '#888' : '#000' }}
+              onMouseEnter={() => setHoverKey(m.key)}
+              onMouseLeave={() => setHoverKey(null)}
             >
               {/* 頭貼 */}
-              <div onClick={()=>{setModalProfile({ ...prof, uid:m.uid });setShowModal(true);}}
+              <div
                 style={{
-                  width:40, height:40, borderRadius:'50%', marginRight:10,
-                  background:`url(${prof.pfp||''}) center/cover,#ccc`, cursor:'pointer'
-              }}></div>
+                  width: 40, height: 40, borderRadius: '50%', marginRight: 10, flexShrink: 0,
+                  background: `url(${prof.pfp || ''}) center/cover,#ccc`, cursor: 'pointer'
+                }}
+                onClick={() => { setModalProfile({ ...prof, uid: m.uid }); setShowModal(true); }}
+              />
 
               {/* 文字 */}
-              <div style={{ flexGrow:1 }}>
-                <div style={{ fontWeight:'bold', cursor:'pointer' }}
-                  onClick={()=>{setModalProfile({ ...prof, uid:m.uid });setShowModal(true);}}>
+              <div style={{ flexGrow: 1 }}>
+                <div
+                  style={{ fontWeight: 'bold', cursor: 'pointer' }}
+                  onClick={() => { setModalProfile({ ...prof, uid: m.uid }); setShowModal(true); }}
+                >
                   {prof.username || '使用者'}
                 </div>
-                <div>{muted ? '（已屏蔽）' : m.text}</div>
-                <div style={{ fontSize:'0.8em', color:'#666' }}>
+                <div>{mute ? '（已屏蔽）' : m.text}</div>
+                <div style={{ fontSize: '0.8em', color: '#666' }}>
                   {new Date(m.timestamp).toLocaleString()}
                 </div>
               </div>
 
-              {/* 收回按鈕 */}
-              {me && hoverKey===m.key && (
-                <button onClick={()=>recallMessage(m.key)}
-                  style={{
-                    position:'absolute', right:0, top:10, background:'#ffd9d9',
-                    border:'none', borderRadius:4, padding:'4px 8px', cursor:'pointer'
-                  }}>
+              {/* 收回 */}
+              {me && hoverKey === m.key && (
+                <button
+                  className="button recall-btn"
+                  style={{ background: '#ffd9d9', width: 'auto', padding: '4px 8px', position:'absolute', right:0, top:6 }}
+                  onClick={() => recall(m.key)}
+                >
                   收回
                 </button>
               )}
@@ -155,26 +140,28 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
         <div ref={bottomRef}></div>
       </div>
 
-      {/* 輸入框 */}
-      <div style={{ display:'flex', gap:10 }}>
+      {/* 輸入區 */}
+      <div style={{ display: 'flex', gap: 10 }}>
         <input
-          style={{ flex:1, padding:8 }}
-          placeholder="輸入訊息..."
+          className="input"
+          placeholder="輸入訊息…"
           value={newMsg}
-          onChange={e=>setNewMsg(e.target.value)}
-          onKeyDown={e=>{ if(e.key==='Enter') sendMessage(); }}
+          onChange={e => setNewMsg(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
         />
-        <button onClick={sendMessage} style={{ padding:'0 20px' }}>發送</button>
+        <button className="button" style={{ flexShrink: 0, width: 90 }} onClick={sendMessage}>
+          發送
+        </button>
       </div>
 
-      {/* 個人檔案 Modal */}
+      {/* Profile Modal */}
       {showModal && modalProfile && (
         <ProfileModal
           profile={modalProfile}
           user={user}
           isBlocked={blocked.includes(modalProfile.uid)}
-          onBlockToggle={()=>toggleBlock(modalProfile.uid)}
-          onClose={()=>setShowModal(false)}
+          onBlockToggle={() => toggleBlock(modalProfile.uid)}
+          onClose={() => setShowModal(false)}
         />
       )}
     </div>

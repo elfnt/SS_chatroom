@@ -97,49 +97,39 @@ function App() {
 
   if (!user || page === 'login') {
     return (
-      <div style={{ padding: 20, maxWidth: 400, margin: '0 auto' }}>
-        <h2>登入 / 註冊</h2>
-
-        <div style={{ marginBottom: 10 }}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            style={{ width: '100%', padding: 8 }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 20 }}>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            style={{ width: '100%', padding: 8 }}
-          />
-        </div>
-
-        <div style={{ marginBottom: 10 }}>
-          <button onClick={signup} style={{ width: '100%', padding: 10 }}>註冊</button>
-        </div>
-
-        <div style={{ marginBottom: 10 }}>
-          <button onClick={signin} style={{ width: '100%', padding: 10 }}>登入</button>
-        </div>
-
-        <div style={{ marginBottom: 10 }}>
-          <button onClick={googleSignin}
-            style={{
-              width: '100%', padding: 10,
-              backgroundColor: '#4285F4', color: 'white', border: 'none'
-            }}>
-            使用 Google 登入
-          </button>
-        </div>
+      <div className="container">
+        <h2 className="title">登入 / 註冊</h2>
+  
+        <input
+          className="input"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+        />
+  
+        <input
+          className="input"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+        />
+  
+        <button className="button" onClick={signup}>註冊</button>
+        <button className="button" onClick={signin}>登入</button>
+  
+        <button
+          className="button"
+          style={{ backgroundColor: '#4285F4' }}   
+          onClick={googleSignin}
+        >
+          使用 Google 登入
+        </button>
       </div>
     );
   }
+  
 
   if (page === 'profile') {
     return <ProfilePage user={user} onBack={() => checkProfileAndSetPage(user)} />;
