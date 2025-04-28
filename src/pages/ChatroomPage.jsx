@@ -13,6 +13,7 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
   const [blocked, setBlocked] = useState(
     JSON.parse(localStorage.getItem('blockedUsers') || '[]')
   );
+  const [lastSentKey, setLastSentKey] = useState(null); // ★ 記錄剛送出的訊息
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -48,14 +49,15 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
 
   useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), [messages]);
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!newMsg.trim()) return;
-    push(ref(database, 'messages'), {
+    const newRef = push(ref(database, 'messages'), {
       uid: user.uid,
       text: newMsg.trim(),
       timestamp: Date.now()
     });
     setNewMsg('');
+    setLastSentKey((await newRef).key);
   };
 
   const recall = key => {
@@ -96,7 +98,7 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
           return (
             <div
               key={m.key}
-              className="message-item"
+              className={`message-item ${m.key === lastSentKey ? 'super-animate' : ''}`} // ★ 套用炫酷class
               style={{ opacity: mute ? 0.5 : 1, color: mute ? '#888' : '#000' }}
               onMouseEnter={() => setHoverKey(m.key)}
               onMouseLeave={() => setHoverKey(null)}

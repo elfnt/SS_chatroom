@@ -120,7 +120,7 @@ function App() {
         <button className="button" onClick={signin}>登入</button>
   
         <button
-          className="button"
+          className="button google"
           style={{ backgroundColor: '#4285F4' }}   
           onClick={googleSignin}
         >

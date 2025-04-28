@@ -37,7 +37,7 @@ function ProfileModal({ profile, user, onClose, onBlockToggle, isBlocked }) {
         {!isSelf && (
           <button
             className="button"
-            style={{ background: isBlocked ? '#ffaaaa' : '#aaffaa', marginTop: 10 }}
+            style={{ background: isBlocked ? '#aaffaa' : '#ffaaaa', marginTop: 10 }}
             onClick={() => onBlockToggle(profile.uid)}
           >
             {isBlocked ? '解除封鎖' : '封鎖此用戶'}
