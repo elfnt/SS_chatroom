@@ -13,7 +13,8 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
   const [blocked, setBlocked] = useState(
     JSON.parse(localStorage.getItem('blockedUsers') || '[]')
   );
-  const [lastSentKey, setLastSentKey] = useState(null); // ★ 記錄剛送出的訊息
+  const [lastSentKey, setLastSentKey] = useState(null);
+  const [searchText, setSearchText] = useState(''); // ★ 新增：搜尋關鍵字
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -77,6 +78,11 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
     setShowModal(false);
   };
 
+  /* ---------- 過濾後要顯示的訊息 ---------- */
+  const filteredMessages = messages.filter(m => 
+    m.text.toLowerCase().includes(searchText.toLowerCase())
+  );
+
   return (
     <div className="container">
       {/* 頂欄 */}
@@ -88,9 +94,19 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
         </div>
       </div>
 
+      {/* 搜尋欄 */}
+      <div style={{ marginBottom: 10 }}>
+        <input
+          className="input"
+          placeholder="搜尋訊息…"
+          value={searchText}
+          onChange={e => setSearchText(e.target.value)}
+        />
+      </div>
+
       {/* 訊息列表 */}
       <div className="message-list">
-        {messages.map(m => {
+        {filteredMessages.map(m => {
           const prof = profiles[m.uid] || {};
           const me = m.uid === user.uid;
           const mute = blocked.includes(m.uid);
@@ -98,7 +114,7 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
           return (
             <div
               key={m.key}
-              className={`message-item ${m.key === lastSentKey ? 'super-animate' : ''}`} // ★ 套用炫酷class
+              className={`message-item ${m.key === lastSentKey ? 'super-animate' : ''}`}
               style={{ opacity: mute ? 0.5 : 1, color: mute ? '#888' : '#000' }}
               onMouseEnter={() => setHoverKey(m.key)}
               onMouseLeave={() => setHoverKey(null)}
