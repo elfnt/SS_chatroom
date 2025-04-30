@@ -1,29 +1,46 @@
-/* ---------- Reset & base ---------- */
+/* ---------- Reset ---------- */
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;color:#222}
 
-/* ---------- Layout 容器 ---------- */
-.container{
-  max-width:600px;
-  margin:0 auto;
-  background:#fff;
-  border-radius:10px;
-  box-shadow:0 0 10px rgba(0,0,0,.05);
+/* ---------- Layout ---------- */
+.container{display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{
+  width:240px;flex-shrink:0;background:#fafafa;padding:16px;
+  border-right:1px solid #ddd;overflow-y:auto;position:relative
+}
+.sidebar .button{width:100%;margin-top:6px}
+
+/* ===== Sidebar 標題 + 建立列（同一行） ===== */
+.sidebar-header-row{
+  display:flex;align-items:center;gap:12px;margin-bottom:16px
+}
+.sidebar-header-row h3{
+  margin:0;
+  font-size:20px;
+  flex-shrink:0;
+}
+.room-input {
+  flex:1;
+  height:40px;
+}
+.room-create-btn{
+  width:80px;
+  height:40px;
+  padding:8px;
+}
+
+/* Chat area */
+.chat-area{
+  flex:1;
   display:flex;
   flex-direction:column;
-  height:100vh;              /* 讓訊息列表可以 flex 自撐 */
+  overflow:hidden;
   padding:20px;
 }
 
-/* ---------- 標題 ---------- */
-.title{
-  font-size:28px;
-  font-weight:700;
-  text-align:center;
-  margin-bottom:15px;
-}
-
-/* ---------- 輸入欄 ---------- */
+/* Input + Button */
 .input{
   width:100%;
   padding:10px;
@@ -31,8 +48,6 @@ body{font-family:"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;color:#222
   border-radius:6px;
   font-size:16px;
 }
-
-/* ---------- 通用按鈕 ---------- */
 .button{
   padding:10px;
   width:100%;
@@ -42,37 +57,85 @@ body{font-family:"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;color:#222
   border-radius:6px;
   font-size:16px;
   cursor:pointer;
-  transition:transform .15s,background-color .3s;
+  box-shadow:0 2px 5px rgba(0,0,0,.1);
+  transition:transform .15s,background .3s
 }
-.button:hover{background:#43a047;transform:scale(1.03)}
+.button.google{background:#4285F4}
+.button:hover{transform:scale(1.03);background:#43a047}
+.button:active{transform:scale(0.9)}
 
-/* ---------- 頂欄 (自訂容器用) ---------- */
-.header{flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
-
-/* ---------- 訊息列表 ---------- */
+/* Message list */
 .message-list{
   flex:1 1 auto;
-  height:0;                 /* 配合 flex:1 令其撐滿剩餘高度 */
+  height:0;
   overflow-y:auto;
   background:#fafafa;
   padding:10px;
   border:1px solid #ddd;
   border-radius:8px;
-  margin-bottom:15px;
+  margin-top:10px
 }
 .message-item{
   display:flex;
   gap:10px;
   padding:10px 0;
   border-bottom:1px solid #eee;
-  word-break:break-word;
+  position:relative;
+  align-items:flex-start;
 }
 .message-item:last-child{border-bottom:none}
 
-/* ---------- 送訊息區 ---------- */
-.send-bar{flex:0 0 auto;display:flex;gap:10px}
+/* Avatar & message body */
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  flex-shrink:0;
+  cursor:pointer;
+  background:#ccc center/cover no-repeat;
+}
+.msg-body{
+  min-width:0;
+  flex-grow:1;
+  word-break:break-word;
+}
 
-/* ---------- Profile Modal ---------- */
+/* 收回按鈕 hover 顯示 */
+.recall-btn{
+  display:none;
+  position:absolute;
+  right:6px;
+  top:6px;
+  background:#e0e0e0;
+  color:#333;
+  font-size:12px;
+  border:none;
+  border-radius:4px;
+  padding:4px 6px;
+  cursor:pointer;
+}
+.message-item:hover .recall-btn,
+.recall-btn:hover{display:block}
+
+/* 發送欄 */
+.send-bar{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+/* super-animate 特效 */
+@keyframes superBounceGlow{
+  0%{transform:scale(.3);opacity:0;filter:brightness(200%) saturate(150%)}
+  50%{transform:scale(1.05) rotate(2deg);opacity:1;filter:brightness(120%) saturate(120%)}
+  70%{transform:scale(.98) rotate(-2deg)}
+  100%{transform:scale(1);filter:brightness(100%) saturate(100%)}
+}
+.super-animate{
+  animation:superBounceGlow .7s cubic-bezier(.68,-.55,.27,1.55)
+}
+
+/* Profile modal */
 .profile-modal{
   background:#fff;
   padding:20px;
@@ -84,84 +147,43 @@ body{font-family:"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;color:#222
 .profile-modal h3{margin:10px 0}
 .profile-modal p{color:#666;font-size:.9em;text-align:left}
 
-/* ---------- 小螢幕 RWD ---------- */
-@media (max-width:600px){
-  .container{width:95%;padding:15px}
-  .title{font-size:24px}
+/* ===== RWD：手機排版：sidebar 不消失，改成頂部列 ===== */
+@media(max-width:700px){
+  .container{flex-direction:column}
+  .sidebar{
+    width:100%;
+    height:auto;
+    border-right:none;
+    border-bottom:1px solid #ddd;
+    display:flex;
+    flex-direction:column;
+  }
+  .chat-area{padding:15px}
   .input,.button{font-size:15px}
-  .message-list{height:300px}
+  .sidebar .button{margin-top:6px}
 }
 
-/* 讓收回鈕只在 hover 時出現 */
-.message-item { position:relative; }                 
-.recall-btn {
-  display:none;
-  position:absolute;
-  right:0;
-  top:6px;
-}
-.message-item:hover .recall-btn,
-.recall-btn:hover {
-  display:block;
+
+.auth-page,
+.profile-page {
+  max-width: 400px;
+  margin: 60px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    margin-top: 10px;
-    font-size: 16px;
-  }
-  
-  .button {
-    width: 100%;
-    padding: 12px;
-    margin-top: 10px;
-    background-color: #4caf50;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: transform 0.2s, background-color 0.3s;
-  }
-  
-  /* 特別針對 Google 按鈕 */
-  .button.google {
-    background-color: #4285F4;
-  }
-  
-  .button:hover {
-    transform: scale(1.03);
-  }
-  
-  .button:active {
-    transform: scale(0.9);
-  }
-  
-  @keyframes superBounceGlow {
-    0% {
-      transform: scale(0.3);
-      opacity: 0;
-      filter: brightness(200%) saturate(150%);
-    }
-    50% {
-      transform: scale(1.05) rotate(2deg);
-      opacity: 1;
-      filter: brightness(120%) saturate(120%);
-    }
-    70% {
-      transform: scale(0.98) rotate(-2deg);
-    }
-    100% {
-      transform: scale(1) rotate(0deg);
-      filter: brightness(100%) saturate(100%);
-    }
-  }
-  
-  .super-animate {
-    animation: superBounceGlow 0.7s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-  }
-  
+.auth-page h2,
+.profile-page h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-page .input,
+.profile-page .input,
+.auth-page .button,
+.profile-page .button {
+  width: 100%;
+  margin-top: 12px;
+}

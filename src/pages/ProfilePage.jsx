@@ -69,7 +69,7 @@ function ProfilePage({ user, onBack }) {
   };
 
   return (
-    <div className="container">
+    <div className="profile-page">
       <h2 className="title">編輯個人檔案</h2>
 
       {/* 頭貼 */}

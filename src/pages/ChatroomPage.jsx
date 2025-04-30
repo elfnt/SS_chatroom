@@ -1,154 +1,155 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { ref, push, remove, onChildAdded, onChildRemoved, get ,set} from 'firebase/database';
 import { database } from '../services/firebase';
-import { ref, push, remove, onChildAdded, onChildRemoved, get } from 'firebase/database';
 import ProfileModal from './ProfileModal';
 
-function ChatroomPage({ user, onSignOut, onEditProfile }) {
-  const [messages, setMessages] = useState([]);
-  const [profiles, setProfiles] = useState({});
-  const [newMsg, setNewMsg] = useState('');
-  const [hoverKey, setHoverKey] = useState(null);
+export default function ChatroomPage({ user, roomID }) {
+  const [messages, setMessages]   = useState([]);
+  const [profiles, setProfiles]   = useState({});
+  const [newMsg, setNewMsg]       = useState('');
+  const [hoverKey, setHoverKey]   = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [modalProfile, setModalProfile] = useState(null);
-  const [blocked, setBlocked] = useState(
-    JSON.parse(localStorage.getItem('blockedUsers') || '[]')
-  );
-  const [lastSentKey, setLastSentKey] = useState(null);
-  const [searchText, setSearchText] = useState(''); // ★ 新增：搜尋關鍵字
+  const [blocked, setBlocked]     = useState(JSON.parse(localStorage.getItem('blockedUsers') || '[]'));
+  const [lastSentKey, setLastSentKey]   = useState(null);
+  const [searchText, setSearchText]     = useState('');
   const bottomRef = useRef(null);
+  const [inviteName, setInviteName] = useState('');
 
+
+  /* 監聽訊息 */
   useEffect(() => {
-    const msgRef = ref(database, 'messages');
-
-    onChildAdded(msgRef, snap => {
-      const key = snap.key, data = snap.val();
-      setMessages(prev => (prev.find(m => m.key === key) ? prev : [...prev, { key, ...data }]));
+    setMessages([]);
+    const mRef = ref(database, `chatrooms/${roomID}/messages`);
+    const offAdd = onChildAdded(mRef, snap => {
+      setMessages(p => p.find(m => m.key === snap.key) ? p : [...p, { key: snap.key, ...snap.val() }]);
     });
-    onChildRemoved(msgRef, snap => {
-      const key = snap.key;
-      setMessages(prev => prev.filter(m => m.key !== key));
+    const offRem = onChildRemoved(mRef, snap => {
+      setMessages(p => p.filter(m => m.key !== snap.key));
     });
-  }, []);
+    return () => { offAdd(); offRem(); };
+  }, [roomID]);
 
+  /* lazy 取 profile */
   useEffect(() => {
     (async () => {
       const unknown = messages.map(m => m.uid)
         .filter(uid => !profiles[uid])
-        .filter((uid, idx, arr) => arr.indexOf(uid) === idx);
+        .filter((uid, i, a) => a.indexOf(uid) === i);
       if (!unknown.length) return;
-
       const upd = {};
-      await Promise.all(
-        unknown.map(async uid => {
-          const s = await get(ref(database, `profiles/${uid}`));
-          if (s.exists()) upd[uid] = s.val();
-        })
-      );
+      for (const uid of unknown) {
+        const s = await get(ref(database, `profiles/${uid}`));
+        if (s.exists()) upd[uid] = s.val();
+      }
       if (Object.keys(upd).length) setProfiles(p => ({ ...p, ...upd }));
     })();
   }, [messages, profiles]);
 
   useEffect(() => bottomRef.current?.scrollIntoView({ behavior: 'auto' }), [messages]);
 
-  const sendMessage = async () => {
+  /* 發送 / 收回 */
+  const sendMsg = async () => {
     if (!newMsg.trim()) return;
-    const newRef = push(ref(database, 'messages'), {
-      uid: user.uid,
-      text: newMsg.trim(),
-      timestamp: Date.now()
+    const newRef = await push(ref(database, `chatrooms/${roomID}/messages`), {
+      uid: user.uid, text: newMsg.trim(), timestamp: Date.now()
     });
-    setNewMsg('');
-    setLastSentKey((await newRef).key);
+    setNewMsg(''); setLastSentKey(newRef.key);
   };
-
-  const recall = key => {
-    remove(ref(database, `messages/${key}`))
-      .then(() => console.log('收回成功'))
-      .catch(err => {
-        console.error('收回失敗', err);
-        alert('收回失敗：' + err.message);
-      });
-  };
+  const recall = key => remove(ref(database, `chatrooms/${roomID}/messages/${key}`));
 
   const toggleBlock = uid => {
     if (uid === user.uid) return alert('不能封鎖自己！');
-    const upd = blocked.includes(uid) ? blocked.filter(id => id !== uid) : [...blocked, uid];
+    const upd = blocked.includes(uid) ? blocked.filter(i => i !== uid) : [...blocked, uid];
     setBlocked(upd);
     localStorage.setItem('blockedUsers', JSON.stringify(upd));
     setShowModal(false);
   };
 
-  /* ---------- 過濾後要顯示的訊息 ---------- */
-  const filteredMessages = messages.filter(m => 
-    m.text.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const shown = messages.filter(m => m.text.toLowerCase().includes(searchText.toLowerCase()));
+
+  const handleInvite = async () => {
+    const name = inviteName.trim();
+    if (!name) return alert('請輸入 username');
+    if (name === profiles[user.uid]?.username) return alert('不能邀請自己');
+  
+    const snapshot = await get(ref(database, 'profiles'));
+    const allProfiles = snapshot.val() || {};
+  
+    const matchedUid = Object.keys(allProfiles).find(
+      uid => allProfiles[uid].username === name
+    );
+  
+    if (!matchedUid) {
+      return alert('找不到該 username');
+    }
+  
+    if (matchedUid === user.uid) {
+      return alert('不能邀請自己');
+    }
+  
+    const memberRef = ref(database, `chatrooms/${roomID}/members/${matchedUid}`);
+    const memberSnap = await get(memberRef);
+    if (memberSnap.exists()) {
+      return alert('此用戶已在聊天室中');
+    }
+  
+    await set(memberRef, true);
+    alert('已成功邀請該用戶！');
+    setInviteName('');
+  };
+  
 
   return (
-    <div className="container">
-      {/* 頂欄 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-        <h2 className="title">聊天室</h2>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="button" onClick={onEditProfile}>Profile</button>
-          <button className="button" onClick={onSignOut}>Logout</button>
-        </div>
-      </div>
+    <>
+    {/* --- 邀請用戶欄 --- */}
+    <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+      <input
+        className="input"
+        placeholder="輸入使用者名稱以邀請"
+        value={inviteName}
+        onChange={e => setInviteName(e.target.value)}
+      />
+      <button className="button" style={{ flexShrink: 0, width: 90 }} onClick={handleInvite}>
+        邀請
+      </button>
+    </div>
 
-      {/* 搜尋欄 */}
-      <div style={{ marginBottom: 10 }}>
-        <input
-          className="input"
-          placeholder="搜尋訊息…"
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-        />
-      </div>
+      {/* 搜尋 */}
+      <input className="input" placeholder="搜尋訊息…" value={searchText}
+             onChange={e => setSearchText(e.target.value)} />
 
-      {/* 訊息列表 */}
+      {/* 訊息清單 */}
       <div className="message-list">
-        {filteredMessages.map(m => {
+        {shown.map(m => {
           const prof = profiles[m.uid] || {};
-          const me = m.uid === user.uid;
+          const me   = m.uid === user.uid;
           const mute = blocked.includes(m.uid);
 
           return (
-            <div
-              key={m.key}
-              className={`message-item ${m.key === lastSentKey ? 'super-animate' : ''}`}
-              style={{ opacity: mute ? 0.5 : 1, color: mute ? '#888' : '#000' }}
-              onMouseEnter={() => setHoverKey(m.key)}
-              onMouseLeave={() => setHoverKey(null)}
-            >
+            <div key={m.key}
+                 className={`message-item ${m.key === lastSentKey ? 'super-animate' : ''}`}
+                 style={{ opacity: mute ? 0.5 : 1, color: mute ? '#888' : '#000' }}
+                 onMouseEnter={() => setHoverKey(m.key)}
+                 onMouseLeave={() => setHoverKey(null)}>
               {/* 頭貼 */}
-              <div
-                style={{
-                  width: 40, height: 40, borderRadius: '50%', marginRight: 10, flexShrink: 0,
-                  background: `url(${prof.pfp || ''}) center/cover,#ccc`, cursor: 'pointer'
-                }}
-                onClick={() => { setModalProfile({ ...prof, uid: m.uid }); setShowModal(true); }}
-              />
-
+              <div className="avatar"
+                   style={{ background: `url(${prof.pfp || ''}) center/cover,#3f51b5` }}
+                   onClick={() => { setModalProfile({ ...prof, uid: m.uid }); setShowModal(true); }}/>
               {/* 文字 */}
-              <div style={{ flexGrow: 1 }}>
-                <div
-                  style={{ fontWeight: 'bold', cursor: 'pointer' }}
-                  onClick={() => { setModalProfile({ ...prof, uid: m.uid }); setShowModal(true); }}
-                >
+              <div className="msg-body">
+                <div style={{ fontWeight:'bold', cursor:'pointer' }}
+                     onClick={() => { setModalProfile({ ...prof, uid: m.uid }); setShowModal(true); }}>
                   {prof.username || '使用者'}
                 </div>
                 <div>{mute ? '（已屏蔽）' : m.text}</div>
-                <div style={{ fontSize: '0.8em', color: '#666' }}>
+                <div style={{ fontSize:'0.8em', color:'#666' }}>
                   {new Date(m.timestamp).toLocaleString()}
                 </div>
               </div>
-
               {/* 收回 */}
               {me && hoverKey === m.key && (
-                <button
-                  className="button recall-btn"
-                  style={{ background: '#ffd9d9', width: 'auto', padding: '4px 8px', position:'absolute', right:0, top:6 }}
-                  onClick={() => recall(m.key)}
-                >
+                <button className="recall-btn" onClick={() => recall(m.key)}>
                   收回
                 </button>
               )}
@@ -158,21 +159,15 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
         <div ref={bottomRef}></div>
       </div>
 
-      {/* 輸入區 */}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <input
-          className="input"
-          placeholder="輸入訊息…"
-          value={newMsg}
-          onChange={e => setNewMsg(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') sendMessage(); }}
-        />
-        <button className="button" style={{ flexShrink: 0, width: 90 }} onClick={sendMessage}>
-          發送
-        </button>
+      {/* 送訊息列 */}
+      <div className="send-bar">
+        <input className="input" style={{ flex:1 }} placeholder="輸入訊息…"
+               value={newMsg} onChange={e => setNewMsg(e.target.value)}
+               onKeyDown={e => { if (e.key === 'Enter') sendMsg(); }}/>
+        <button className="button" style={{ width:90 }} onClick={sendMsg}>發送</button>
       </div>
 
-      {/* Profile Modal */}
+      {/* Modal */}
       {showModal && modalProfile && (
         <ProfileModal
           profile={modalProfile}
@@ -182,8 +177,6 @@ function ChatroomPage({ user, onSignOut, onEditProfile }) {
           onClose={() => setShowModal(false)}
         />
       )}
-    </div>
+    </>
   );
 }
-
-export default ChatroomPage;

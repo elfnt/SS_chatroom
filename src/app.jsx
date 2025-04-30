@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { auth, database } from './services/firebase';
 import { ref, set, get } from 'firebase/database';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-import ChatroomPage from './pages/ChatroomPage';
+import ChatAppPage from './pages/ChatAppPage';
 import ProfilePage from './pages/ProfilePage';
 
 function App() {
@@ -97,7 +97,7 @@ function App() {
 
   if (!user || page === 'login') {
     return (
-      <div className="container">
+      <div className="auth-page">
         <h2 className="title">登入 / 註冊</h2>
   
         <input
@@ -135,7 +135,7 @@ function App() {
     return <ProfilePage user={user} onBack={() => checkProfileAndSetPage(user)} />;
   }
 
-  return <ChatroomPage user={user} onSignOut={signout} onEditProfile={() => setPage('profile')} />;
+  return <ChatAppPage user={user} onSignOut={signout} onEditProfile={() => setPage('profile')} />;
 }
 
 export default App;
