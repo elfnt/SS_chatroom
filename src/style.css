@@ -1,0 +1,189 @@
+/* ---------- Reset ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Helvetica Neue",Arial,sans-serif;background:#f5f5f5;color:#222}
+
+/* ---------- Layout ---------- */
+.container{display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{
+  width:240px;flex-shrink:0;background:#fafafa;padding:16px;
+  border-right:1px solid #ddd;overflow-y:auto;position:relative
+}
+.sidebar .button{width:100%;margin-top:6px}
+
+/* ===== Sidebar 標題 + 建立列（同一行） ===== */
+.sidebar-header-row{
+  display:flex;align-items:center;gap:12px;margin-bottom:16px
+}
+.sidebar-header-row h3{
+  margin:0;
+  font-size:20px;
+  flex-shrink:0;
+}
+.room-input {
+  flex:1;
+  height:40px;
+}
+.room-create-btn{
+  width:80px;
+  height:40px;
+  padding:8px;
+}
+
+/* Chat area */
+.chat-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  padding:20px;
+}
+
+/* Input + Button */
+.input{
+  width:100%;
+  padding:10px;
+  border:1px solid #ccc;
+  border-radius:6px;
+  font-size:16px;
+}
+.button{
+  padding:10px;
+  width:100%;
+  background:#4caf50;
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  font-size:16px;
+  cursor:pointer;
+  box-shadow:0 2px 5px rgba(0,0,0,.1);
+  transition:transform .15s,background .3s
+}
+.button.google{background:#4285F4}
+.button:hover{transform:scale(1.03);background:#43a047}
+.button:active{transform:scale(0.9)}
+
+/* Message list */
+.message-list{
+  flex:1 1 auto;
+  height:0;
+  overflow-y:auto;
+  background:#fafafa;
+  padding:10px;
+  border:1px solid #ddd;
+  border-radius:8px;
+  margin-top:10px
+}
+.message-item{
+  display:flex;
+  gap:10px;
+  padding:10px 0;
+  border-bottom:1px solid #eee;
+  position:relative;
+  align-items:flex-start;
+}
+.message-item:last-child{border-bottom:none}
+
+/* Avatar & message body */
+.avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  flex-shrink:0;
+  cursor:pointer;
+  background:#ccc center/cover no-repeat;
+}
+.msg-body{
+  min-width:0;
+  flex-grow:1;
+  word-break:break-word;
+}
+
+/* 收回按鈕 hover 顯示 */
+.recall-btn{
+  display:none;
+  position:absolute;
+  right:6px;
+  top:6px;
+  background:#e0e0e0;
+  color:#333;
+  font-size:12px;
+  border:none;
+  border-radius:4px;
+  padding:4px 6px;
+  cursor:pointer;
+}
+.message-item:hover .recall-btn,
+.recall-btn:hover{display:block}
+
+/* 發送欄 */
+.send-bar{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+
+/* super-animate 特效 */
+@keyframes superBounceGlow{
+  0%{transform:scale(.3);opacity:0;filter:brightness(200%) saturate(150%)}
+  50%{transform:scale(1.05) rotate(2deg);opacity:1;filter:brightness(120%) saturate(120%)}
+  70%{transform:scale(.98) rotate(-2deg)}
+  100%{transform:scale(1);filter:brightness(100%) saturate(100%)}
+}
+.super-animate{
+  animation:superBounceGlow .7s cubic-bezier(.68,-.55,.27,1.55)
+}
+
+/* Profile modal */
+.profile-modal{
+  background:#fff;
+  padding:20px;
+  border-radius:10px;
+  width:90%;
+  max-width:300px;
+  text-align:center;
+}
+.profile-modal h3{margin:10px 0}
+.profile-modal p{color:#666;font-size:.9em;text-align:left}
+
+/* ===== RWD：手機排版：sidebar 不消失，改成頂部列 ===== */
+@media(max-width:700px){
+  .container{flex-direction:column}
+  .sidebar{
+    width:100%;
+    height:auto;
+    border-right:none;
+    border-bottom:1px solid #ddd;
+    display:flex;
+    flex-direction:column;
+  }
+  .chat-area{padding:15px}
+  .input,.button{font-size:15px}
+  .sidebar .button{margin-top:6px}
+}
+
+
+.auth-page,
+.profile-page {
+  max-width: 400px;
+  margin: 60px auto;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.auth-page h2,
+.profile-page h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.auth-page .input,
+.profile-page .input,
+.auth-page .button,
+.profile-page .button {
+  width: 100%;
+  margin-top: 12px;
+}
