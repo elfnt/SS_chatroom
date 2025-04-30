@@ -1,8 +1,12 @@
 # SS_chatroom 112062203
 
 ## Github、Firebase links
+
 https://github.com/elfnt/SS_chatroom/tree/main
+
 https://ss-chatroo.web.app
+
+![image](./img/gitgraph.png)
 
 ## Local 端設置
 
@@ -64,8 +68,6 @@ https://ss-chatroo.web.app
 新發送的訊息會有晃動特效
 
 #### Demo 
-
-
 
 <video controls>
     <source src="./img/demo.mov" type="video/mp4">
